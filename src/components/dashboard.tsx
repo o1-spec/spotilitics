@@ -1,5 +1,12 @@
 "use client";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Area,
   AreaChart,
@@ -61,7 +68,7 @@ const views = [
   "Personal Wrapped",
 ];
 function viewSlug(view: string) {
-  return view.toLowerCase().replaceAll(" ", "-");
+  return view.toLowerCase().trim().replace(/\s+/g, "-");
 }
 function viewFromSlug(slug: string | null) {
   return views.find((view) => viewSlug(view) === slug) ?? "Overview";
@@ -100,7 +107,9 @@ export function Dashboard({
     tracks: connected && initialView === "Overview",
     history: connected && initialView === "Overview",
   });
-  const [overviewErrors, setOverviewErrors] = useState<Record<string, string>>({});
+  const [overviewErrors, setOverviewErrors] = useState<Record<string, string>>(
+    {},
+  );
   const [reload, setReload] = useState(0);
   const [rows, setRows] = useState<HistoryRow[]>([]);
   const [importError, setImportError] = useState("");
@@ -141,28 +150,41 @@ export function Dashboard({
     (!stats.to || heatmapMonth <= stats.to.slice(0, 7))
       ? heatmapMonth
       : stats.from?.slice(0, 7) || allStats.from?.slice(0, 7) || "";
-  const changeView = useCallback((nextView: string) => {
-    if (nextView === view) return;
-    setView(nextView);
-    setError("");
-    setLoadMoreError("");
-    setSearch("");
-    const needsRemoteData = ["Artists", "Tracks", "History"].includes(nextView);
-    setLoading(connected && needsRemoteData);
-    if (connected && nextView === "Overview") {
-      setOverviewLoading({
-        profile: true,
-        artists: true,
-        tracks: true,
-        history: true,
-      });
-      setOverviewErrors({});
-    }
-    const url = new URL(window.location.href);
-    if (nextView === "Overview") url.searchParams.delete("view");
-    else url.searchParams.set("view", viewSlug(nextView));
-    window.history.pushState(null, "", `${url.pathname}${url.search}${url.hash}`);
-  }, [connected, view]);
+  const changeView = useCallback(
+    (nextView: string) => {
+      if (nextView === view) return;
+      setView(nextView);
+      setError("");
+      setLoadMoreError("");
+      setSearch("");
+      const needsRemoteData = ["Artists", "Tracks", "History"].includes(
+        nextView,
+      );
+      setLoading(connected && needsRemoteData);
+      if (connected && nextView === "Overview") {
+        setOverviewLoading({
+          profile: true,
+          artists: true,
+          tracks: true,
+          history: true,
+        });
+        setOverviewErrors({});
+      }
+      const url = new URL(window.location.href);
+      if (nextView === "Overview") url.searchParams.delete("view");
+      else
+        url.searchParams.set(
+          "view",
+          nextView.toLowerCase().trim().replace(/\s+/g, "-"),
+        );
+      window.history.pushState(
+        null,
+        "",
+        `${url.pathname}${url.search}${url.hash}`,
+      );
+    },
+    [connected, view],
+  );
 
   useEffect(() => {
     const syncViewFromHistory = () => {
@@ -173,7 +195,9 @@ export function Dashboard({
       setError("");
       setLoadMoreError("");
       setSearch("");
-      setLoading(connected && ["Artists", "Tracks", "History"].includes(nextView));
+      setLoading(
+        connected && ["Artists", "Tracks", "History"].includes(nextView),
+      );
       if (connected && nextView === "Overview") {
         setOverviewLoading({
           profile: true,
@@ -289,7 +313,8 @@ export function Dashboard({
     };
   }, [view, wrappedSlides.length, changeView]);
   useEffect(() => {
-    if (!connected || view === "Analytics" || view === "Personal Wrapped") return;
+    if (!connected || view === "Analytics" || view === "Personal Wrapped")
+      return;
     const controller = new AbortController();
     if (view === "Overview") {
       // Keep the overview's independent panels responsive to different API latencies.
@@ -321,19 +346,27 @@ export function Dashboard({
             if (reason.name !== "AbortError")
               setOverviewErrors((current) => ({
                 ...current,
-                [resource]: reason.message || "Spotify could not load this data.",
+                [resource]:
+                  reason.message || "Spotify could not load this data.",
               }));
           })
           .finally(() => {
             if (!controller.signal.aborted)
-              setOverviewLoading((current) => ({ ...current, [resource]: false }));
+              setOverviewLoading((current) => ({
+                ...current,
+                [resource]: false,
+              }));
           });
       }
       return () => controller.abort();
     }
 
     const resource =
-      view === "Artists" ? "artists" : view === "History" ? "history" : "tracks";
+      view === "Artists"
+        ? "artists"
+        : view === "History"
+          ? "history"
+          : "tracks";
     const query = new URLSearchParams({ resource, range });
     fetch(`/api/spotify?${query}`, {
       signal: controller.signal,
@@ -412,7 +445,12 @@ export function Dashboard({
     }
   }
   function retryOverview() {
-    setOverviewLoading({ profile: true, artists: true, tracks: true, history: true });
+    setOverviewLoading({
+      profile: true,
+      artists: true,
+      tracks: true,
+      history: true,
+    });
     setOverviewErrors({});
     setLoading(false);
     setReload((value) => value + 1);
@@ -506,7 +544,9 @@ export function Dashboard({
       setRows([]);
       setAnalyticsPending(true);
       setWrappedYear("");
-      setImportSummary("Imported listening history was cleared from this browser.");
+      setImportSummary(
+        "Imported listening history was cleared from this browser.",
+      );
       setImportError("");
       setStorageError("");
       setFromFilter("");
@@ -580,10 +620,7 @@ export function Dashboard({
         </p>
       )}
       {rows.length > 0 && (
-        <Button
-          variant="ghost"
-          onClick={() => setClearDialogOpen(true)}
-        >
+        <Button variant="ghost" onClick={() => setClearDialogOpen(true)}>
           Clear imported history
         </Button>
       )}
@@ -609,7 +646,11 @@ export function Dashboard({
         <Brand />
         {connected ? (
           <form ref={logoutForm} action="/api/auth/logout" method="post">
-            <Button variant="outline" type="button" onClick={() => setLogoutDialogOpen(true)}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setLogoutDialogOpen(true)}
+            >
               Sign out
             </Button>
           </form>
@@ -622,14 +663,21 @@ export function Dashboard({
       <main className="app-main">
         {connectionNotice && (
           <div className="notice connection-notice" role="status">
-            <span>Spotify is connected. Your dashboard is loading your listening data.</span>
+            <span>
+              Spotify is connected. Your dashboard is loading your listening
+              data.
+            </span>
             <Button
               variant="ghost"
               onClick={() => {
                 setConnectionNotice(false);
                 const url = new URL(window.location.href);
                 url.searchParams.delete("connected");
-                window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+                window.history.replaceState(
+                  null,
+                  "",
+                  `${url.pathname}${url.search}${url.hash}`,
+                );
               }}
             >
               Dismiss
@@ -637,7 +685,10 @@ export function Dashboard({
           </div>
         )}
         <span className="section-kicker">YOUR LISTENING, IN FOCUS</span>
-        {connected && view === "Overview" && overviewLoading.profile && !profile ? (
+        {connected &&
+        view === "Overview" &&
+        overviewLoading.profile &&
+        !profile ? (
           <ProfileSkeleton />
         ) : (
           <div className="profile-heading">
@@ -675,15 +726,19 @@ export function Dashboard({
           onKeyDown={(event) => {
             const currentIndex = views.indexOf(view);
             let nextIndex = currentIndex;
-            if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % views.length;
-            else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + views.length) % views.length;
+            if (event.key === "ArrowRight")
+              nextIndex = (currentIndex + 1) % views.length;
+            else if (event.key === "ArrowLeft")
+              nextIndex = (currentIndex - 1 + views.length) % views.length;
             else if (event.key === "Home") nextIndex = 0;
             else if (event.key === "End") nextIndex = views.length - 1;
             else return;
             event.preventDefault();
             const nextView = views[nextIndex];
             changeView(nextView);
-            document.getElementById(`tab-${nextView.replaceAll(" ", "-")}`)?.focus();
+            document
+              .getElementById(`tab-${nextView.replaceAll(" ", "-")}`)
+              ?.focus();
           }}
         >
           {views.map((v) => (
@@ -704,7 +759,13 @@ export function Dashboard({
           id="dashboard-panel"
           role="tabpanel"
           aria-labelledby={`tab-${view.replaceAll(" ", "-")}`}
-          aria-busy={loading || (view === "Overview" && Object.values(overviewLoading).some(Boolean)) || ((view === "Analytics" || view === "Personal Wrapped") && analyticsPending)}
+          aria-busy={
+            loading ||
+            (view === "Overview" &&
+              Object.values(overviewLoading).some(Boolean)) ||
+            ((view === "Analytics" || view === "Personal Wrapped") &&
+              analyticsPending)
+          }
         >
           <div className="toolbar">
             <h2>{view}</h2>
@@ -772,7 +833,7 @@ export function Dashboard({
                   >
                     Try again
                   </Button>
-            <a href="/connect">Reconnect Spotify</a>
+                  <a href="/connect">Reconnect Spotify</a>
                 </div>
               </div>
             )}
@@ -798,7 +859,12 @@ export function Dashboard({
                   </p>
                 )}
                 {view === "Overview" ? (
-                  <div className="overview-columns" aria-busy={overviewLoading.artists || overviewLoading.tracks}>
+                  <div
+                    className="overview-columns"
+                    aria-busy={
+                      overviewLoading.artists || overviewLoading.tracks
+                    }
+                  >
                     {overviewErrors.artists ? (
                       <InlineLoadingError
                         label="Top artists"
@@ -915,7 +981,10 @@ export function Dashboard({
                   </div>
                 )}
                 {loadingMore && view !== "Overview" && (
-                  <RankingGridSkeleton kind={view === "Artists" ? "artist" : "track"} cards={3} />
+                  <RankingGridSkeleton
+                    kind={view === "Artists" ? "artist" : "track"}
+                    cards={3}
+                  />
                 )}
                 {view === "Overview" && (
                   <>
@@ -1042,9 +1111,11 @@ export function Dashboard({
               {!storageReady && (
                 <AnalyticsSkeleton label="Opening your saved listening history" />
               )}
-              {storageReady && analyticsPending && rows.length > 0 && filteredCount === 0 && !analyticsError && (
-                <AnalyticsSkeleton />
-              )}
+              {storageReady &&
+                analyticsPending &&
+                rows.length > 0 &&
+                filteredCount === 0 &&
+                !analyticsError && <AnalyticsSkeleton />}
               {analyticsPending && (filteredCount > 0 || analyticsError) && (
                 <p className="data-note" role="status">
                   Updating your listening story…
@@ -1417,8 +1488,12 @@ export function Dashboard({
             ) : rows.length ? (
               analyticsError ? (
                 <div className="notice error" role="alert">
-                  {analyticsError} Choose Analytics to review or import your history.
-                  <Button variant="ghost" onClick={() => changeView("Analytics")}>
+                  {analyticsError} Choose Analytics to review or import your
+                  history.
+                  <Button
+                    variant="ghost"
+                    onClick={() => changeView("Analytics")}
+                  >
                     Open Analytics
                   </Button>
                 </div>
@@ -1508,10 +1583,17 @@ export function Dashboard({
                       onClick={async () => {
                         setExportMessage("");
                         try {
-                          await downloadRecap(wrappedSlides[safeSlide], safeSlide);
-                          setExportMessage("Your recap image download has started.");
+                          await downloadRecap(
+                            wrappedSlides[safeSlide],
+                            safeSlide,
+                          );
+                          setExportMessage(
+                            "Your recap image download has started.",
+                          );
                         } catch {
-                          setExportMessage("Could not create the recap image. Please try again.");
+                          setExportMessage(
+                            "Could not create the recap image. Please try again.",
+                          );
                         }
                       }}
                     >
@@ -1760,7 +1842,15 @@ function Artwork({ item }: { item: Item }) {
   return <ArtworkFrame key={src ?? "no-artwork"} src={src} alt={item.name} />;
 }
 
-function ArtworkFrame({ src, alt, className = "" }: { src?: string; alt: string; className?: string }) {
+function ArtworkFrame({
+  src,
+  alt,
+  className = "",
+}: {
+  src?: string;
+  alt: string;
+  className?: string;
+}) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   return (
