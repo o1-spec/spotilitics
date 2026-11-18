@@ -35,6 +35,7 @@ export async function GET(request: Request) {
       refresh_token: tokens.refresh_token,
       expires_at: Date.now() + tokens.expires_in * 1000,
     });
+    destination = "/dashboard?connected=1";
   } catch {
     destination = authConfigured()
       ? "/connect?error=authorization"
